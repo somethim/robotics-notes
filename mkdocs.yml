@@ -1,0 +1,84 @@
+site_name: Elements of Robotics & Automation
+site_description: A theory reference for robotics and automation — split into linked topic notes.
+# EDIT this to your GitHub Pages URL, e.g. https://<user>.github.io/<repo>/
+site_url: https://example.github.io/robotics/
+
+docs_dir: content
+
+theme:
+  name: material
+  features:
+    - navigation.indexes      # section index.md becomes the section landing page
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - tables
+  - admonition
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Foundations:
+      - foundations/index.md
+      - Introduction to Robotics & Autonomy: foundations/introduction.md
+      - Automation vs Autonomy: foundations/automation-vs-autonomy.md
+      - The Autonomy Stack: foundations/autonomy-stack.md
+  - Geometry & Spatial Math:
+      - geometry/index.md
+      - Coordinate Frames & Transforms: geometry/coordinate-frames.md
+      - Rotations & Orientation: geometry/rotations.md
+  - Kinematics:
+      - kinematics/index.md
+      - Pose & Kinematics: kinematics/pose-kinematics.md
+      - Forward & Inverse Kinematics: kinematics/forward-inverse-kinematics.md
+  - Hardware & Programming:
+      - hardware/index.md
+      - Mechanical Configuration & Actuation: hardware/mechanical-configuration.md
+      - Robot Programming & Manipulators: hardware/robot-programming.md
+  - Autonomy Stack — Modules:
+      - autonomy/index.md
+      - Control Systems & PID: autonomy/control-pid.md
+      - Sensors & State Estimation: autonomy/state-estimation.md
+      - Perception: autonomy/perception.md
+      - Trajectory Generation & Tracking: autonomy/trajectory.md
+      - Planning & Navigation: autonomy/planning.md
+      - Mission Logic & FSM: autonomy/mission-fsm.md
+      - State-Space Modeling: autonomy/state-space.md
+      - System Integration & Robustness: autonomy/integration-robustness.md
+  - Tooling:
+      - tooling/index.md
+      - Simulation & Digital Twins: tooling/simulation-digital-twins.md
