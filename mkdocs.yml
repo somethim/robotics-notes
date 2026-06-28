@@ -1,7 +1,8 @@
 site_name: Elements of Robotics & Automation
 site_description: A theory reference for robotics and automation — split into linked topic notes.
-# EDIT this to your GitHub Pages URL, e.g. https://<user>.github.io/<repo>/
-site_url: https://example.github.io/robotics/
+site_url: https://robotics.arbikullakshi.com/
+repo_url: https://github.com/somethim/robotics-notes
+repo_name: somethim/robotics-notes
 
 docs_dir: content
 
