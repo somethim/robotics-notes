@@ -26,6 +26,8 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
+        with:
+          enablement: true   # enable Pages (GitHub Actions build) if not already
 
       - name: Setup Python
         uses: actions/setup-python@v5
