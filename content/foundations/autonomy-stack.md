@@ -4,13 +4,9 @@ tags: [robotics, architecture]
 
 # The Autonomy Stack
 
-This is the **hub note**. It assembles every other topic in the vault into one picture: the **master
-autonomy block diagram**. Where [Introduction to Robotics & Autonomy](introduction.md) introduces the
-**Sense–Think–Act** loop and [Automation vs Autonomy](automation-vs-autonomy.md) explains *why* an open world demands real
-decision-making, this note shows **how the blocks connect into a single closed loop** — and how a fault
-in one block propagates through the rest.
+**Hub note**: every vault topic as one closed-loop block diagram. [Introduction to Robotics & Autonomy](introduction.md) gives Sense–Think–Act; [Automation vs Autonomy](automation-vs-autonomy.md) gives *why*; this shows *how blocks connect* and how a fault propagates.
 
-## The master autonomy block diagram
+## Master block diagram
 
 ```mermaid
 flowchart TD
@@ -30,43 +26,26 @@ flowchart TD
     ROB -->|supervision, fallback, emergency| FSM
 ```
 
-Every arrow is a **dependency and an interface**. Information flows *down* the left side as commands
-(decide → plan → shape → control → act) and flows *up* the right side as knowledge (measure → estimate →
-interpret → inform). Robustness watches the whole thing.
+Each arrow = a dependency + interface. **Down the left** = commands (decide → plan → shape → control → act); **up the right** = knowledge (measure → estimate → interpret → inform). Robustness watches all.
 
-## Acting blocks vs. Knowing blocks
+## Acting vs Knowing
 
-The stack splits cleanly into two halves of the Sense–Think–Act loop:
-
-| | **Acting** (the "Act/decide" half) | **Knowing** (the "Sense/understand" half) |
-|---|-----------------------------------|-------------------------------------------|
-| Blocks | Mission Logic/FSM, Planning, Trajectory, Control | Sensors, State Estimation, Perception |
-| Question | **"What should I do, and how do I make it happen?"** | **"What is true about me and the world?"** |
+| | **Acting** ("what to do + make happen") | **Knowing** ("what's true") |
+|---|---|---|
+| Blocks | FSM, Planning, Trajectory, Control | Sensors, Estimation, Perception |
 | Notes | [Mission Logic & FSM](../autonomy/mission-fsm.md), [Planning & Navigation](../autonomy/planning.md), [Trajectory Generation & Tracking](../autonomy/trajectory.md), [Control Systems & PID](../autonomy/control-pid.md) | [Sensors & State Estimation](../autonomy/state-estimation.md), [Perception](../autonomy/perception.md) |
 
-A useful split inside the Knowing half: **state estimation** answers *"where am **I**?"* (self: pose,
-velocity), while **perception** answers *"what is **around** me?"* (world: obstacles, free space). Both
-rest on the [State-Space Modeling](../autonomy/state-space.md) description of how the robot evolves.
+Inside Knowing: **estimation** = "where am *I*?" (self pose/velocity); **perception** = "what's *around* me?" (obstacles/free space). Both rest on [State-Space Modeling](../autonomy/state-space.md).
 
-## Integration / Robustness — the supervisor
+## Integration / Robustness = supervisor
 
-[System Integration & Robustness](../autonomy/integration-robustness.md) is not in the command chain; it **sits above every block**. It
-ingests **health and confidence** from estimation and perception, watches for **delay, stale data, frame
-mismatch, saturation, and faults**, and feeds **supervision, fallback, and emergency** signals back into
-the FSM. Its job is to ensure that locally-correct modules combine into a **globally safe** system — the
-core message of [Automation vs Autonomy](automation-vs-autonomy.md) about *how systems break*.
+[System Integration & Robustness](../autonomy/integration-robustness.md) sits **above** the chain, not in it. Ingests health/confidence; watches **delay, stale data, frame mismatch, saturation, faults**; feeds supervision/fallback/emergency to the FSM. Ensures locally-correct modules → **globally safe** system.
 
-## The closed loop in words
+## Closed loop in words
 
-The robot **acts** (Control → Robot), the world responds, **sensors** measure it, **state estimation**
-cleans those measurements into a believable state, **perception** interprets the surroundings, and that
-information flows back up to **planning** and **mission logic**, which decide what to do next.
-**Robustness supervises every block.** Nothing in the loop ever runs open — each tick of the system is
-one trip around this cycle.
+Act (Control→Robot) → world responds → sensors measure → estimation cleans to a state → perception interprets → flows up to planning/FSM → decide next. **Never runs open**; each tick = one trip around the cycle.
 
-## The quadcopter mission story
-
-The same stack, told as a time-ordered sequence for a takeoff-and-transit mission:
+## Quadcopter mission (time-ordered)
 
 ```mermaid
 sequenceDiagram
@@ -93,39 +72,30 @@ sequenceDiagram
     M->>M: continue? replan? return? land?
 ```
 
-Read top to bottom: the **FSM** sets a goal, the **planner** picks a route, the **trajectory generator**
-makes it dynamically flyable, the **controller** turns it into thrust/torque, the **robot** moves, the
-**sensors** measure the motion, **estimation** fuses them into `x̂`, **perception** builds a world model,
-the **health monitor** reports battery and faults, and the FSM **decides what to do next** — closing the
-loop.
+## Cross-topic dependencies (gotchas)
 
-## Cross-topic dependencies (why this is one system, not seven)
-
-Because the blocks are chained, a weakness in one **silently corrupts** those downstream:
+A weak block **silently corrupts** those downstream:
 
 | Weak block | Damages | Why |
 |------------|---------|-----|
-| **Estimation** | **Control** *and* **Planning** | both consume `x̂`; a wrong state means tracking and planning from the wrong place |
-| **Perception** | **Navigation** | a missed obstacle gets routed straight through |
-| **Planning** | **Trajectory** | a bad route creates **dynamically impossible** trajectories |
-| **Mission logic** | **the whole mission** | poor decisions continue a **doomed** mission |
-| **Integration** | **everything** | weak supervision makes even good modules **unsafe** |
+| **Estimation** | Control + Planning | both consume `x̂`; wrong state → track/plan from wrong place |
+| **Perception** | Navigation | missed obstacle routed straight through |
+| **Planning** | Trajectory | bad route → dynamically impossible trajectory |
+| **Mission logic** | whole mission | bad decisions continue a doomed mission |
+| **Integration** | everything | weak supervision makes good modules unsafe |
 
-This is the central lesson of the stack: **"a correct algorithm" is not enough.** A module provably
-correct *in isolation* can still cause a crash if it runs on stale data, in the wrong frame, or without a
-fallback. **Correctness must be defined at the integrated-system level, under uncertainty and
-degradation** — which is precisely the remit of [System Integration & Robustness](../autonomy/integration-robustness.md).
+**Lesson**: a correct-in-isolation module still crashes on stale data, wrong frame, or no fallback. **Correctness must be defined at the integrated-system level, under uncertainty/degradation** — remit of [System Integration & Robustness](../autonomy/integration-robustness.md).
 
-## Where each block is detailed
+## Where each block lives
 
-- **Decide:** [Mission Logic & FSM](../autonomy/mission-fsm.md) — discrete mission states, transitions, fail-safe switching.
-- **Route:** [Planning & Navigation](../autonomy/planning.md) — global/local planning, search, sampling, cost maps.
-- **Shape:** [Trajectory Generation & Tracking](../autonomy/trajectory.md) — turning a route into a feasible, timed reference.
-- **Act:** [Control Systems & PID](../autonomy/control-pid.md) — closed-loop tracking of that reference with real actuators.
-- **Estimate:** [Sensors & State Estimation](../autonomy/state-estimation.md) — sensor models, fusion, Bayes/Kalman filtering.
-- **Understand:** [Perception](../autonomy/perception.md) — raw data → structured world model.
-- **Model:** [State-Space Modeling](../autonomy/state-space.md) — the continuous description estimation and control act on.
-- **Supervise:** [System Integration & Robustness](../autonomy/integration-robustness.md) — interfaces, timing, frames, fault handling.
+- **Decide:** [Mission Logic & FSM](../autonomy/mission-fsm.md)
+- **Route:** [Planning & Navigation](../autonomy/planning.md)
+- **Shape:** [Trajectory Generation & Tracking](../autonomy/trajectory.md)
+- **Act:** [Control Systems & PID](../autonomy/control-pid.md)
+- **Estimate:** [Sensors & State Estimation](../autonomy/state-estimation.md)
+- **Understand:** [Perception](../autonomy/perception.md)
+- **Model:** [State-Space Modeling](../autonomy/state-space.md)
+- **Supervise:** [System Integration & Robustness](../autonomy/integration-robustness.md)
 
 ## Related
 
@@ -139,3 +109,7 @@ degradation** — which is precisely the remit of [System Integration & Robustne
 - [Mission Logic & FSM](../autonomy/mission-fsm.md)
 - [State-Space Modeling](../autonomy/state-space.md)
 - [System Integration & Robustness](../autonomy/integration-robustness.md)
+
+## Handbook references
+- *Underactuated Robotics* — [Output Feedback (Pixels-to-Torques)](https://underactuated.csail.mit.edu/output_feedback.html)
+- *Robotic Manipulation* — [Introduction](https://manipulation.csail.mit.edu/intro.html)

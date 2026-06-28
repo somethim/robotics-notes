@@ -4,88 +4,84 @@ tags: [robotics, actuation]
 
 # Mechanical Configuration & Actuation
 
-Once kinematics tells us *where* a joint must go (see [Forward & Inverse Kinematics](../kinematics/forward-inverse-kinematics.md)) and control tells us *how hard* to push (see [Control Systems & PID](../autonomy/control-pid.md)), something physical has to actually move the link. **Actuation** is that something — the conversion of stored or supplied energy into mechanical motion at the joints. The two great **fluid-power** families used in heavy and industrial robotics are **hydraulics** (incompressible liquid) and **pneumatics** (compressible gas). Each is a complete subsystem with its own source, conditioning, control, and output stages, and the choice between them shapes the robot's force, speed, cleanliness, and safety envelope.
+**Actuation** = converting supplied energy into joint motion, downstream of kinematics ([Forward & Inverse Kinematics](../kinematics/forward-inverse-kinematics.md)) and control ([Control Systems & PID](../autonomy/control-pid.md)). Two fluid-power families: **hydraulics** (incompressible oil) and **pneumatics** (compressible air).
 
 ---
 
-## 1. Hydraulic Systems
+## 1. Hydraulic systems
 
-**Principle.** A hydraulic system uses a **hydraulic fluid (oil)** to **transfer power and control motion** between robot components such as actuators and manipulators. The key physical fact is that the fluid is **largely incompressible** and **dense**: when the pump pressurises it, that pressure is transmitted almost without loss to the actuator, so a small pump can command very large, stiff forces. This makes hydraulics the choice for **heavy-duty industrial robots** where **high forces, precision, and reliability** are required.
+**Principle.** Oil is **incompressible + dense** → pump pressure transmits near-losslessly to the actuator; small pump commands large, stiff forces. For **heavy-duty** robots needing high force, precision, reliability.
 
-**The power chain.** Mechanical energy (usually from an electric motor) → **pump** converts it to hydraulic (pressure) energy → valves route the pressurised fluid → **piston/cylinder** converts it back into linear mechanical motion → fluid returns to the reservoir to be recirculated. It is a **closed, recirculating loop**: the same oil is used over and over.
-
-### Components
+**Power chain (closed, recirculating):** motor → **pump** (mech→hydraulic) → valves → **piston/cylinder** (→ linear motion) → fluid back to reservoir.
 
 | # | Component | Role |
 |---|-----------|------|
-| 1 | **Reservoir** | Stores the fluid; lets it **settle, release air bubbles, and dissipate heat**; maintains a consistent fluid level. |
-| 2 | **Filter** | Removes dirt, debris and particles to keep the fluid **clean**, protecting pump and valves. Sits inside the reservoir or in-line. |
-| 3 | **Pump** | Converts **mechanical → hydraulic energy**. Creates a vacuum at the inlet to draw fluid from the reservoir, then pressurises it to drive the system. |
-| 4 | **Pressure-Release Valve (PRV)** | **Safety device** set at a predetermined pressure. On **overpressure** it opens and dumps excess fluid back to the reservoir, preventing damage. |
-| 5 | **Two-way / Control valve** | Directs the **direction and flow** of fluid to the actuators. Can be **manual, solenoid (induction), or servo-controlled** — the link between an electrical command and physical motion. |
-| 6 | **Piston** | Converts hydraulic energy into **linear mechanical motion**: fluid entering one side pushes the piston. |
-| 7 | **Piston cylinder** | The sealed chamber housing the piston; the piston's travel inside it produces motion that can **lift, push, or pull**. |
-| 8 | **Return pipe** | Carries spent fluid back to the reservoir after it has done its work, completing the recirculation cycle. |
+| 1 | **Reservoir** | Stores fluid; settles air, dissipates heat. |
+| 2 | **Filter** | Removes particles; protects pump/valves. |
+| 3 | **Pump** | Mech → hydraulic; draws & pressurises fluid. |
+| 4 | **Pressure-Release Valve (PRV)** | Safety; on overpressure dumps fluid to reservoir. |
+| 5 | **Control valve** | Directs direction/flow; manual, solenoid, or servo — the electrical→motion link. |
+| 6 | **Piston** | Hydraulic → linear motion. |
+| 7 | **Piston cylinder** | Sealed chamber; lift/push/pull. |
+| 8 | **Return pipe** | Spent fluid back to reservoir. |
 
-**Applications.** Manufacturing (**pressing, cutting, forming, lifting**); construction (cranes, excavators, bulldozers); aerospace (flight-control surfaces, landing gear); automotive (braking, power steering, shock absorbers); agriculture (tractors, combine harvesters). All are tasks demanding **high force and precise, reliable control**.
+**Applications.** Pressing/cutting/forming/lifting; cranes, excavators; flight controls, landing gear; braking, power steering; tractors. (High force + precise control.)
 
-**Advantages.** **High power density** (large force/torque in a small package thanks to incompressibility); **precise control** of speed and force; **high reliability and durability** with relatively low maintenance; **continuous, stable operation** that reduces wear; **high efficiency** with minimal transmission loss in continuous duty. Proper upkeep means regular **oil checks, filter changes, and PRV inspections**.
+**Advantages.** High power density, precise speed/force control, high reliability/durability, continuous stable operation, low transmission loss. **Upkeep:** oil checks, filter changes, PRV inspection.
 
 ---
 
-## 2. Pneumatic Systems
+## 2. Pneumatic systems
 
-**Principle.** A pneumatic system uses **compressed air** as the working medium. A compressor squeezes ambient air into a smaller volume; releasing that stored energy through actuators produces motion. Because air is **light, compressible, and has a high flow rate**, pneumatics excels at **fast, repetitive, light-to-medium-force** tasks, and the medium itself is clean and safe.
+**Principle.** **Compressed air**: light, compressible, high flow rate → fast, repetitive, light-to-medium force; clean and safe.
 
-**The power chain.** Ambient air → **inlet filter** → **compressor** raises pressure → **cooler** + **separator** condition it (remove heat, moisture, oil) → **receiver** stores it → **check / control valves** route it → **actuator** turns air pressure into motion. Unlike hydraulics, the air is **not recirculated** — it is exhausted to atmosphere after use and must be **continuously replenished** by the compressor.
-
-### Components
+**Power chain (open, exhausts to atmosphere — not recirculated):** ambient air → **inlet filter** → **compressor** → **cooler** + **separator** → **receiver** → **valves** → **actuator**. Air continuously replenished.
 
 | # | Component | Role |
 |---|-----------|------|
-| 1 | **Inlet filter** | Removes dust, dirt and contaminants from incoming air so only clean air enters. |
-| 2 | **Compressor** | The "heart" of the system — pressurises ambient air into a smaller volume. Types: **reciprocating, rotary, centrifugal**. |
-| 3 | **Cooler** (after/inter-cooler) | Lowers the temperature of compressed air, **condensing moisture** before it reaches downstream parts. |
-| 4 | **Separator** | Removes **moisture and oil** from the air, maintaining air quality. |
-| 5 | **Receiver (air reservoir)** | Stores compressed air for a **steady supply**, damps **pressure fluctuations**, and provides backup for peak demand. |
-| 6 | **Feedback** | Gauges and flow meters give **real-time** pressure and flow information for monitoring. |
-| 7 | **Pressure switch** | Monitors pressure; at a threshold it **activates/deactivates** components such as the compressor or valves. |
-| 8 | **Secondary air handling** | Extra conditioning: **air dryer** (removes moisture → prevents corrosion), **air filter** (further filtration), **oil filter** (removes oil vapour from lubricated compressors). |
-| 9 | **Check valve** | Regulates flow to actuators. Sub-types: **directional control** (sets direction), **pressure control** (regulates pressure), **flow control** (controls flow rate). |
-| 10 | **Actuator** | Converts air energy into motion: **pneumatic cylinders** (linear), **pneumatic motors** (rotary), **pneumatic grippers** (grasping), **pneumatic valves** (flow control). |
+| 1 | **Inlet filter** | Removes dust/contaminants. |
+| 2 | **Compressor** | "Heart"; pressurises air. Reciprocating/rotary/centrifugal. |
+| 3 | **Cooler** | Lowers temp, condenses moisture. |
+| 4 | **Separator** | Removes moisture + oil. |
+| 5 | **Receiver** | Stores air; damps pressure fluctuations; peak backup. |
+| 6 | **Feedback** | Gauges/flow meters — real-time monitoring. |
+| 7 | **Pressure switch** | At threshold, activates/deactivates compressor/valves. |
+| 8 | **Secondary air handling** | Dryer / air filter / oil filter. |
+| 9 | **Check valve** | Regulates flow; directional / pressure / flow control sub-types. |
+| 10 | **Actuator** | Air → motion: cylinders (linear), motors (rotary), grippers, valves. |
 
-**Applications.** Manufacturing (assembly lines, material handling, packaging); automotive (welding, painting, part manipulation); construction (hammers, nail guns, drills); medical (dental and surgical equipment); aerospace (landing-gear control, doors, brakes).
+**Applications.** Assembly/packaging; welding/painting; nail guns/drills; dental/surgical; landing-gear, doors, brakes.
 
-**Advantages.** **Fast response** (high air flow → rapid movement, high cycle rates); **simple design** and installation; **cost-effective** vs hydraulic/electrical; **safe** — compressed air is **non-toxic and non-flammable**, suited to sensitive environments.
+**Advantages.** Fast response, simple design, cost-effective, safe (non-toxic, non-flammable).
 
 ---
 
-## 3. Hydraulics vs Pneumatics — Comparison
-
-The two are complementary: hydraulics buys **force and stiffness** at the price of weight, mess, and complexity; pneumatics buys **speed, cleanliness, and safety** at the price of force.
+## 3. Hydraulics vs Pneumatics
 
 | Criterion | **Hydraulics** | **Pneumatics** | Winner |
 |-----------|----------------|----------------|--------|
-| **Force** | Dense, incompressible fluid → very high pressure (**7 000–35 000 kN/m²**), so large forces and torque. | Low-density, compressible gas → typically only **500–700 kN/m²**; cannot reach hydraulic forces. | **Hydraulics** |
-| **Cleanliness** | Susceptible to **leaks** of oil/fluid; often **prohibited** in clean rooms, pharma, food & beverage. | Only leaks **air**; internally cleaned of oil/water/particles; favoured for clean/green environments. | **Pneumatics** |
-| **Speed** | Oil's high viscosity and resistance make it **slower**; slower to start; fluid can't be vented quickly, must return to reservoir. | High air flow rate → **rapid energy release**, high-speed motion and high duty cycles. | **Pneumatics** |
-| **Energy** | Fluid is **reused** indefinitely; efficient long-term **if** well filtered/maintained — but the pump still wastes energy. | Compressor must run **continuously**; air **can't be recycled** and any leak wastes energy. | **Hydraulics** (long-run) |
-| **Safety** | Fluids may be **flammable, corrosive, toxic, hot**; leaks are a hazard; used fluid needs safe disposal. | Air is **non-toxic, non-corrosive, non-explosive**; main risk is a violent burst causing physical injury. | **Pneumatics** |
-| **Complexity** | Needs valves, pipes, externally-powered pump and reservoir — more engineering; can be centralised for a plant. | Simpler designs, lower pressures, cheaper materials; no anti-corrosion/anti-flammability precautions needed. | **Pneumatics** |
-| **Maintenance** | Main enemy is **corrosion**; needs non-corrosive piping, regular monitoring, replacement of seals/pipes/valves. | Cleaner and easier; routine checks for seals and leaks; key task is servicing the **filter-regulator-lubricator** unit. | **Pneumatics** |
+| **Force** | **7 000–35 000 kN/m²**; very high force/torque. | **500–700 kN/m²**; far lower. | Hydraulics |
+| **Cleanliness** | Oil leaks; banned in clean rooms/pharma/food. | Only leaks air; clean. | Pneumatics |
+| **Speed** | Viscous, slower; can't vent fast. | High flow → fast, high duty cycle. | Pneumatics |
+| **Energy** | Fluid reused; efficient long-run if maintained. | Compressor runs continuously; air not recycled; leaks waste. | Hydraulics (long-run) |
+| **Safety** | Fluids flammable/corrosive/toxic/hot. | Air non-toxic/non-explosive; risk = violent burst. | Pneumatics |
+| **Complexity** | Pump, reservoir, piping; more engineering. | Simpler, lower pressure, cheaper. | Pneumatics |
+| **Maintenance** | Corrosion; replace seals/pipes/valves. | Easier; service the FRL (filter-regulator-lubricator). | Pneumatics |
 
-**Rule of thumb.** Reach for **hydraulics** when the job is **heavy, high-force, continuous and stiffness-critical** (presses, excavators, large manipulators). Reach for **pneumatics** when the job is **fast, light, repetitive, clean, or safety-sensitive** (assembly grippers, packaging, medical, food).
+**Rule of thumb.** Hydraulics → heavy, high-force, continuous, stiffness-critical (presses, excavators, large arms). Pneumatics → fast, light, repetitive, clean, safety-sensitive (grippers, packaging, medical, food).
 
 ---
 
-## 4. Where Actuation Sits in the Robot
+## 4. Where actuation sits
 
-Actuation is the **physical muscle** at the bottom of the control stack. The controller (see [Control Systems & PID](../autonomy/control-pid.md)) computes a desired joint torque or force; the actuator — hydraulic cylinder, pneumatic cylinder, or (most commonly in arms) an electric motor — turns that command into motion. The **control valve** is the literal interface between the **electrical command** and the **fluid power**: a solenoid or servo valve receiving a PID output and metering flow accordingly. Crucially, the medium's properties feed back into control design:
+Bottom of the control stack: controller ([Control Systems & PID](../autonomy/control-pid.md)) computes desired torque/force → actuator turns it into motion. **Control valve** = literal electrical-command ↔ fluid-power interface (solenoid/servo metering flow from PID output).
 
-- **Incompressible hydraulics** behave **stiffly** — small valve changes produce predictable motion, easing precise position control.
-- **Compressible pneumatics** behave **springily** — the trapped air acts like a spring, making precise mid-stroke positioning harder and favouring **end-stop** (point-to-point) motion over smooth servoing.
+Medium properties feed back into control:
 
-The actuator choice therefore propagates upward: it sets the achievable **force, speed, and bandwidth**, which constrain the feasible **trajectories** the controller can track and the **kinematic** tasks the arm can perform (the prismatic vertical axis of a SCARA arm, for instance, is exactly the kind of pick/place stroke a pneumatic or hydraulic cylinder drives — see [Forward & Inverse Kinematics](../kinematics/forward-inverse-kinematics.md) and [Robot Programming & Manipulators](robot-programming.md)).
+- **Hydraulics (incompressible)** → **stiff**; predictable, easy precise positioning.
+- **Pneumatics (compressible)** → **springy**; trapped air = spring, hard mid-stroke positioning, favours **end-stop** point-to-point motion.
+
+Actuator choice sets achievable force/speed/bandwidth → constrains feasible trajectories and kinematic tasks (e.g. SCARA prismatic vertical stroke driven by a cylinder — see [Forward & Inverse Kinematics](../kinematics/forward-inverse-kinematics.md), [Robot Programming & Manipulators](robot-programming.md)).
 
 ---
 
@@ -96,3 +92,6 @@ The actuator choice therefore propagates upward: it sets the achievable **force,
 - [Robot Programming & Manipulators](robot-programming.md) — gripper open/close and joint strokes are actuated motions invoked from the program.
 - [Trajectory Generation & Tracking](../autonomy/trajectory.md) — actuator force/speed limits bound which trajectories are feasible.
 - [System Integration & Robustness](../autonomy/integration-robustness.md) — actuator saturation, leaks, and latency as integration-level failure modes.
+
+## Handbook references
+- *Robotic Manipulation* — [Let's get you a robot](https://manipulation.csail.mit.edu/robot.html)

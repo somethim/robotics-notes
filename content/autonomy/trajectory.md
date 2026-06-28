@@ -9,59 +9,56 @@ tags: [robotics, trajectory]
 | Term | Meaning |
 |------|---------|
 | **Setpoint** | one desired value ("go to z = 10") |
-| **Path** | the **geometry** of the route — *where*, no timing |
+| **Path** | route **geometry** — *where*, no timing |
 | **Trajectory** | path **+ timing** — *where AND when* |
-| **Tracking** | following a trajectory over time |
-| **Following** | staying on a path, with possibly flexible timing |
+| **Tracking** | following a time-indexed trajectory |
+| **Following** | staying on a path, timing can flex |
 
-The key split is **path vs trajectory**: a path is pure geometry; a trajectory binds that geometry to **time**, assigning a position (and its derivatives) to every instant. **Tracking** then means a controller chasing that time-indexed reference; **following** is the looser cousin where timing can flex.
+Key split: **path = pure geometry**, **trajectory = geometry bound to time** (position + derivatives at every instant).
 
-## Why it's needed (dynamic feasibility)
+## Why needed — dynamic feasibility
 
-A robot **cannot jump instantly** between waypoints. Motion must respect **dynamic feasibility** — limits on **velocity, acceleration, and actuator capability**. A geometrically valid route can still demand impossible motion: a **sharp corner** requires an instantaneous change of direction, i.e. **infinite acceleration**, which no actuator can deliver. Smooth trajectories are easier and safer to **track**, because the commands they generate stay inside what the motors and the airframe can actually produce. Trajectory generation is what turns a raw route into something **flyable**.
+A robot can't jump instantly between waypoints; motion must respect **velocity, acceleration, actuator limits**. A geometrically valid route can be impossible: a **sharp corner** demands infinite acceleration. Smooth trajectories generate commands inside actuator limits → flyable.
 
 ## Quintic (5th-order) polynomial per axis
 
-To move smoothly from a start to a goal over time `T`, fit a **5th-order polynomial per axis** so that **position, velocity, AND acceleration** all match the boundary conditions at both ends:
-
     p(t) = c₅·t⁵ + c₄·t⁴ + c₃·t³ + c₂·t² + c₁·t + c₀
 
-A quintic has **6 coefficients**, matched to **6 boundary conditions**: position, velocity, and acceleration at `t = 0` and the same three at `t = T`. Conceptually, you write those six conditions as a linear system `A·c = b` — where the velocity and acceleration rows are simply the **first and second derivatives** of the polynomial evaluated at the endpoints — and solve once for the six coefficients (independently for x, y, z). Because velocity and acceleration are pinned to **zero at both ends**, the robot **starts and stops smoothly** — dynamically feasible by construction. A **larger `T`** stretches the same motion over more time, so accelerations are gentler.
+- **6 coefficients** ↔ **6 boundary conditions**: position, velocity, acceleration at `t=0` and `t=T`.
+- Solve `A·c = b` once per axis (vel/accel rows = 1st/2nd derivatives at endpoints).
+- Vel & accel pinned to **zero at both ends** → smooth start/stop, feasible by construction.
+- **Larger `T`** stretches motion → gentler accelerations.
 
 ## Higher-order / minimum-snap
 
-Matching **one more derivative (jerk)** at each end adds two conditions per segment → **8 conditions**, requiring a **degree-7** polynomial (8 coefficients). Minimizing **snap** — the **4th derivative of position** — produces the smoothest quadcopter trajectories, because **snap couples directly into the required torques**: smoother snap means gentler torque demands on the [Control Systems & PID](control-pid.md) inner loop. So:
-
-- **Quintic** matches up to **acceleration** — fine for point-to-point moves.
-- **Degree-7 / minimum-snap** also matches **jerk** and is preferred for **aggressive, multi-segment** flight.
+- Match **jerk** too → 8 conditions → **degree-7** polynomial.
+- **Minimizing snap** (4th derivative of position) gives smoothest quad trajectories: **snap couples directly into required torques** → gentler demand on the [Control Systems & PID](control-pid.md) inner loop.
+- **Quintic** matches up to acceleration — fine for point-to-point.
+- **Degree-7 / min-snap** also matches jerk — preferred for aggressive, multi-segment flight.
 
 ## Differential flatness
 
-A quadrotor is **differentially flat** in the outputs `[x, y, z, ψ]`: once you choose smooth curves for those four **flat outputs**, **all** other states and motor inputs follow algebraically from their derivatives. This is what makes trajectory design tractable — instead of solving the full nonlinear dynamics, you just **shape four output curves** and let differentiation recover the rest. It also explains why snap matters: the inputs depend on high derivatives of these outputs.
+Quadrotor is **flat** in `[x, y, z, ψ]`: choose smooth curves for these four flat outputs and **all** other states + motor inputs follow algebraically from their derivatives. So you shape four output curves instead of solving full nonlinear dynamics — and inputs depend on high derivatives, which is why snap matters.
 
 ## Feasibility constraints
 
-A good trajectory must respect:
+- max velocity
+- max acceleration
+- jerk / snap smoothness
+- thrust / tilt limits
+- controller bandwidth
 
-- **max velocity**
-- **max acceleration**
-- **jerk / snap smoothness**
-- **thrust / tilt limits**
-- **controller bandwidth**
+A geometrically valid path can still be dynamically impossible — feasibility is about **timing and dynamics**, not shape.
 
-*A geometrically valid path can still be dynamically impossible to fly* — feasibility is a property of the **timing and dynamics**, not just the shape.
+## Planning vs generation vs control
 
-## Planning vs trajectory generation vs control
-
-A clean division of labor across the [The Autonomy Stack](../foundations/autonomy-stack.md):
-
-- **[Planning & Navigation](planning.md)** picks *where* — the route/waypoints (geometry, obstacle-free).
-- **Trajectory generation** makes it *flyable* — adds time, respects the dynamic limits above.
-- **[Control Systems & PID](control-pid.md)** makes it *happen* — tracks the time-based reference using the estimated state.
+- **[Planning & Navigation](planning.md)** picks *where* — obstacle-free route/waypoints.
+- **Trajectory generation** makes it *flyable* — adds time, respects limits.
+- **[Control Systems & PID](control-pid.md)** makes it *happen* — tracks the reference using the estimated state.
 
 ## Failure mode
 
-An **over-aggressive (infeasible) trajectory** — timing too tight for the vel/accel/thrust limits — drives the controller into **saturation**: it commands more than the motors can deliver, can no longer track the reference, and tracking error blows up *even though the path was geometrically fine*. The fix is upstream: respect the feasibility constraints when generating the trajectory, or slow it down (increase `T`). [System Integration & Robustness](integration-robustness.md) guards against this by monitoring control-effort saturation and switching to a safe-hover fallback when tracking error grows.
+**Over-aggressive (infeasible) trajectory** → drives controller into **saturation** → can't track → error blows up despite a geometrically fine path. Fix upstream: respect feasibility, or slow down (increase `T`). [System Integration & Robustness](integration-robustness.md) monitors saturation and switches to safe-hover when tracking error grows.
 
 ## Related
 
@@ -71,3 +68,7 @@ An **over-aggressive (infeasible) trajectory** — timing too tight for the vel/
 - [State-Space Modeling](state-space.md) — the dynamic limits and flatness come from the system model.
 - [System Integration & Robustness](integration-robustness.md) — feasibility checking and saturation monitoring.
 - [The Autonomy Stack](../foundations/autonomy-stack.md) — where trajectory generation sits among the acting blocks.
+
+## Handbook references
+- *Underactuated Robotics* — [Trajectory Optimization](https://underactuated.csail.mit.edu/trajopt.html)
+- *Robotic Manipulation* — [Motion Planning](https://manipulation.csail.mit.edu/trajectories.html)

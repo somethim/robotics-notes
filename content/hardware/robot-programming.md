@@ -4,118 +4,104 @@ tags: [robotics, programming]
 
 # Robot Programming & Manipulators
 
-Industrial manipulators are not commanded with continuous PID loops by the end user — they are **programmed** with a high-level, line-numbered **teach-pendant (TP) language** that sits on top of the controller. The programmer specifies *where* to move, *how* to get there, *how fast*, *how precisely to stop*, and *what logic* to run in between (I/O handshakes, counters, branches). The robot's motion planner and servo loops then realise each instruction. This note covers the TP instruction set conceptually and then walks a complete **SCARA quality-control** application as a worked scenario — without reproducing any program listing.
+Industrial arms aren't hand-tuned with PID by the user — they're **programmed** in a line-numbered **teach-pendant (TP) language** over the controller. Programmer specifies *where*, *how*, *how fast*, *how precisely to stop*, *what logic* in between (I/O, counters, branches); the motion planner + servo loops realise it.
 
 ---
 
-## 1. What a Robot Program Is
+## 1. What a program is
 
-A robot program is a sequence of **user-specified commands**, each on its own **numbered line**, that tells the robot how to perform operations plus the "detailed program information" defining the program's attributes. A program weaves together three kinds of instruction:
+Sequence of numbered-line commands, three instruction kinds:
 
-- **Motion** — how and where the arm moves (the motion format, target position, speed, and positioning path).
-- **Logic / control flow** — changing execution order when conditions are met (`IF`, `JMP/LBL`, `CALL/END`, `WAIT`, `FOR`).
-- **Data & I/O** — storing numbers in **registers**, positions in **position registers**, and exchanging **digital signals** with peripheral devices.
+- **Motion** — format, target, speed, positioning path.
+- **Logic / control flow** — `IF`, `JMP/LBL`, `CALL/END`, `WAIT`, `FOR`.
+- **Data & I/O** — registers, position registers, digital signals.
 
-Every program terminates with an **END** symbol indicating no further instructions. A well-structured application is split into a **main program** plus **subprograms** (called for reusable actions such as opening a gripper).
+Ends with **END**. Structured app = **main** + **subprograms** (reusable actions like open-gripper).
 
 ---
 
-## 2. Motion Instructions
+## 2. Motion instructions
 
-A **motion instruction** moves the arm to a taught point at a given speed along a specified trajectory. It has four parts: a **motion format** (trajectory type), **position data** (the target), a **speed** (rate), and a **positioning path** (how to arrive). An **additional** instruction (e.g. acceleration override) can ride along during the move.
-
-**Motion format** — four trajectory types:
+Four parts: **format** (trajectory), **position**, **speed**, **positioning path**. Optional **additional** instruction (e.g. accel override) rides along.
 
 | Format | Letter | Trajectory |
-|--------|--------|------------|
-| **Joint** | **J** | All axes accelerate, move at a feed rate, decelerate and stop **together**; the tool follows whatever curved path results in joint space. Fastest, used when the exact path doesn't matter. |
-| **Linear** | **L** | The tool-centre point follows a **straight line** start→end (also used for pure rotary reorientation). |
-| **Circular** | **C** | The end-effector centre follows an arc start→end **through a via point**; via and end are given on **one line**. |
-| **Arc** | **A** | Circular-arc motion coding **one position per line** (the controller chains successive A points). |
+|--------|--------|-----------|
+| **Joint** | **J** | All axes start/stop together; curved path in joint space. Fastest, path doesn't matter. |
+| **Linear** | **L** | TCP straight line start→end (also pure reorientation). |
+| **Circular** | **C** | Arc through a via point; via + end on **one line**. |
+| **Arc** | **A** | Arc, **one position per line**; controller chains successive A points. |
 
-**Speed** is specified per format: for **joint** moves a **percentage 1–100 %** of max (or a time in sec/msec); for **linear/circular/arc** an absolute speed (e.g. 1–2000 mm/sec, or cm/min, inch/min) or an angular rate (deg/sec) for reorientation, or a time.
-
----
-
-## 3. Positioning Termination — FINE vs CNT
-
-The **positioning path** decides how the robot **terminates** at a point — and this is one of the most important practical knobs:
-
-- **FINE** — the robot **stops exactly** at the point before moving on. Use it where accuracy matters: the precise pick or drop location.
-- **CNT (continuous)** — the robot **approaches but does not stop**, rounding the corner toward the next point to keep motion smooth and fast. A coefficient **0–100** sets how close it gets:
-  - **CNT0** — passes **closest** to the point (tightest corner) while still not stopping.
-  - **CNT100** — takes the **widest** path, never slowing near the point, immediately heading for the next one.
-  - **CNT50** — an intermediate rounding, the typical "smooth transit" choice.
-
-In short, **FINE termination stops exactly at the point; CNTxx approximates it** by the percentage given, trading positional exactness for cycle-time and smoothness.
+**Speed:** joint = % 1–100 of max (or time); linear/circ/arc = absolute (e.g. 1–2000 mm/s), or deg/s for reorientation, or time.
 
 ---
 
-## 4. Speed, Acceleration & Data
+## 3. Termination — FINE vs CNT
 
-- **ACC (acceleration override)** — an *additional* instruction scaling the accel/decel of a move (e.g. ACC50 = half acceleration), gentling the motion for fragile payloads or to reduce wear. Other additional instructions include **Skip** (jump if a condition isn't met before arrival), **Offset**, **Tool_Offset**, **INC** (increment), and **BREAK**.
-- **Registers `R[i]`** — numeric variables holding an integer or decimal, used as **counters** and for **arithmetic** (`R[i] = value`, plus `+ − × ÷`). The quality-control counters live here.
-- **Position registers `PR[i]`** — variables holding **position data** `(x, y, z, w, p, r)`. They can be assigned, summed, or differenced, and reused throughout the program — far more flexible than hard-coded points because the same taught location can be referenced (and offset) in many places. Element access `PR[i, j]` reaches an individual coordinate.
-- **Digital I/O** — **`DI[n]`** (digital input) reads sensor/operator signals; **`DO[n]`** (digital output) drives external devices. These are the program's handshake with the cell (start signals, OK/NOT-OK buttons, "box empty" sensors).
+- **FINE** — **stops exactly** at the point. Use at pick/drop (accuracy).
+- **CNT (continuous)** — **doesn't stop**, rounds the corner. Coefficient 0–100:
+  - **CNT0** — passes closest (tightest corner), still no stop.
+  - **CNT100** — widest path, never slows.
+  - **CNT50** — typical smooth transit.
 
 ---
 
-## 5. Flow Control & Program Structure
+## 4. Speed, accel & data
+
+- **ACCxx** — additional instruction scaling accel/decel (ACC50 = half) for fragile loads/wear. Others: Skip, Offset, Tool_Offset, INC, BREAK.
+- **Registers `R[i]`** — numeric vars; counters + arithmetic (`+ − × ÷`).
+- **Position registers `PR[i]`** — hold `(x, y, z, w, p, r)`; assignable, summable, reusable (vs hard-coded points). `PR[i, j]` = one coordinate.
+- **Digital I/O** — `DI[n]` reads sensor/operator signals; `DO[n]` drives devices. Cell handshake.
+
+---
+
+## 5. Flow control & structure
 
 | Instruction | Meaning |
 |-------------|---------|
-| **END** | Marks program end; if the program was **CALL**ed, returns control to the caller. |
-| **LBL[i]** | A **label** — a named return point in the program. |
-| **JMP LBL[i]** | **Unconditional jump** to a label. |
-| **CALL** | Transfers control to the **first line of a subprogram**; on its END, control returns to the line after the CALL. |
-| **WAIT** | **Suspends** execution either for a fixed time (timed wait) or **until a condition** (e.g. a DI signal) is met — optionally with a timeout branch. |
-| **IF** | **Conditional branch** — jumps to a label/program when a condition holds (single-line test). |
-| **IF_THEN … ELSE … ENDIF** | **Block conditional**: lines under THEN run if the condition holds; lines under ELSE run otherwise; **ENDIF** closes the block. THEN and ELSE branches are mutually exclusive. |
-| **FOR … ENDFOR** | **Counted loop**; the pair is matched automatically. |
-| **R[i] / PR[i]** | Register / position-register assignment and arithmetic (counters, offsets). |
-| **DI[n] / DO[n]** | Read digital input / set digital output. |
+| **END** | Program end; if CALLed, returns to caller. |
+| **LBL[i]** | Label (return point). |
+| **JMP LBL[i]** | Unconditional jump. |
+| **CALL** | Jump to subprogram first line; END returns after CALL. |
+| **WAIT** | Suspend for time or until condition (e.g. DI), optional timeout branch. |
+| **IF** | Single-line conditional branch. |
+| **IF_THEN … ELSE … ENDIF** | Block conditional; THEN/ELSE mutually exclusive. |
+| **FOR … ENDFOR** | Counted loop (auto-matched). |
+| **R[i] / PR[i]** | Register / position-register assign + arithmetic. |
+| **DI[n] / DO[n]** | Read input / set output. |
 | **J / L / C / A** | Motion formats (§2). |
-| **FINE / CNTxx** | Positioning termination (§3). |
-| **ACCxx** | Acceleration override (§4). |
+| **FINE / CNTxx** | Termination (§3). |
+| **ACCxx** | Accel override (§4). |
 
-**Program structure.** A real application is **modular**: a **main** program (e.g. an `A_MAIN` that initialises positions, loops over the work cycle, and handles HMI signals) **CALLs subprograms** for discrete actions — open gripper, close gripper, compute the next stack position. Subprograms keep the main readable and let the same action be reused. Labels and JMPs give the main its cyclic, signal-driven structure; registers carry state (which layer, how many items) between cycles.
+**Structure:** **main** (init positions, loop work cycle, handle HMI) **CALLs subprograms** for discrete actions. Labels/JMPs give cyclic signal-driven structure; registers carry state across cycles.
 
 ---
 
-## 6. Worked Scenario — SCARA / RRTR Quality Control
+## 6. Worked scenario — SCARA QC
 
-### The cell and the task
+**Task.** 4-DOF RRTR SCARA does quality control. Cell: production line, operator post (OK/NOT-OK panel), two boxes. Cycle: pick arriving product → present to operator → on **OK** → box 1, on **NOT-OK** → box 2 → return. Counts each box, resets at **20** (waits for "empty box" signal).
 
-A **4-DOF RRTR SCARA** arm performs **quality control** on a production line. The cell contains a **production line** (where products arrive), an **operator post** (with an OK / NOT-OK panel), and **two boxes**. The cycle: the arm **picks** an arriving product, **presents** it near the operator who visually inspects it and presses **OK** or **NOT-OK**; on **OK** the product goes to **box 1**, on **NOT-OK** to **box 2**; the arm then **returns** to start. The robot **counts** the items placed in each box and **resets** the count at **20** (waiting for an "empty box" signal before continuing).
-
-### Kinematic configuration
-
-**RRTR** = Revolute, Revolute, **Translational (prismatic)**, Revolute. The first two revolute joints sweep the arm in the horizontal plane; the **prismatic** third joint (variable `d`) provides the **vertical** pick/place stroke; the final revolute joint orients the gripper. This is the classic **SCARA** geometry — **rigid vertically, compliant horizontally** — ideal for fast planar pick-and-place. All links have length in *x* and *y* except the last, which has length only in *y*.
-
-**DH parameters** (the per-joint geometry feeding forward kinematics — see [Forward & Inverse Kinematics](../kinematics/forward-inverse-kinematics.md)):
+**Kinematics.** RRTR = Revolute, Revolute, Translational (prismatic), Revolute. Two revolutes sweep horizontal plane; prismatic (var `d`) = vertical pick/place stroke; final revolute orients gripper. SCARA: rigid vertical, compliant horizontal.
 
 | Joint | Type | θ (z) | d (z) | α (x) | a (x) |
 |-------|------|-------|-------|-------|-------|
 | 0–1 | R | θ₁ = 0 | 0.3 | 0 | 0.2 |
 | 1–2 | R | θ₂ = 0 | 0.1 | 180° | 0.15 |
-| 2–3 | **T** (prismatic) | 0 | **Var** | 0 | 0.2 |
+| 2–3 | T | 0 | **Var** | 0 | 0.2 |
 | 3–4 | R | θ₃ = 0 | 0.1 | 0 | 0 |
 
-Each row defines a link transform **Aᵢ**; the **forward kinematics** is the product **S = A₁ · A₂ · A₃ · A₄**, mapping joint values to the gripper pose. The prismatic joint's **Var** `d` is exactly the commanded vertical depth for picking and dropping.
+FK: `S = A₁·A₂·A₃·A₄` (see [Forward & Inverse Kinematics](../kinematics/forward-inverse-kinematics.md)); prismatic **Var** `d` = commanded vertical depth.
 
-### Program logic (conceptual walkthrough)
+**Program logic.**
 
-The application is built from the instruction concepts above; no listing is needed to understand its flow:
-
-1. **Initialise.** Move from **HOME** with a linear move at full speed, terminating **FINE** (stop exactly). Set a **return label** (LBL[1]) and zero the two **counters** `R[1]` (box 1) and `R[2]` (box 2).
-2. **Wait for start.** **WAIT** up to 10 s for the production-line signal `DI[1]`. If it doesn't arrive (`DI[1] = OFF`), **JMP** back to LBL[1] and wait again — a timeout guard so the arm never proceeds without a part.
-3. **Pick.** **CALL** the open-gripper subprogram, then **J** (joint) move to approach point **L** at half speed with **CNT50** (smoothly rounding the corner, no stop), then **L** (linear) to the exact grasp point **L1** at half speed **FINE** (stop precisely), then **CALL** the close-gripper subprogram to grab the product. Retreat **L** back to **L** with **CNT0**.
-4. **Present to operator.** **J** move to the operator position register **PR[OP]** at half speed, **FINE**, with **ACC50** (gentle acceleration so the held part isn't jolted). Set an inspection label (LBL[2]).
-5. **Conditional sort** — an **IF_THEN / ELSE / ENDIF** block on the operator's verdict:
-   - **IF `DI[OK] = ON`** (operator approved): **J** toward box-1 position register **PR[1]** at full speed **CNT50**, approach the drop point **PR[1.1]** at half speed **FINE**, **CALL** open-gripper to release into box 1, retract via **PR[1]** **CNT50**, then **increment** `R[1] = R[1] + 1`.
-   - **ELSE**, nested **IF `DI[NOT_OK] = ON`**: the mirror sequence to **PR[2]** / **PR[2.2]** for box 2, releasing and **incrementing** `R[2] = R[2] + 1`. **ENDIF** closes the block.
-6. **Return & gate.** **L** back to **HOME** at full speed **FINE**, then **WAIT** for the next start signal `DI[1]`.
-7. **Reset at 20.** An **IF … THEN** test: if `R[1] ≥ 20` (or `R[2] ≥ 20`), **WAIT** for the "box empty" signal `DI[BOSH]`, then **reset** the corresponding counter to 0. **WAIT** for start again, then **END**.
+1. **Init.** L move from HOME at full speed, **FINE**. Set LBL[1]; zero counters `R[1]`, `R[2]`.
+2. **Wait start.** WAIT ≤10 s for `DI[1]`; if OFF, JMP LBL[1] (timeout guard).
+3. **Pick.** CALL open-gripper → J approach at half speed **CNT50** → L to grasp **FINE** → CALL close-gripper → L retreat **CNT0**.
+4. **Present.** J to `PR[OP]` half speed **FINE** **ACC50** (gentle). Set LBL[2].
+5. **Sort (IF_THEN/ELSE/ENDIF on verdict):**
+   - **IF `DI[OK]`** → J to box-1 `PR[1]` full **CNT50** → drop `PR[1.1]` half **FINE** → CALL open-gripper → retract `PR[1]` **CNT50** → `R[1]++`.
+   - **ELSE IF `DI[NOT_OK]`** → mirror to `PR[2]`/`PR[2.2]`, release, `R[2]++`. ENDIF.
+6. **Return & gate.** L to HOME full **FINE** → WAIT next `DI[1]`.
+7. **Reset at 20.** IF `R[i] ≥ 20` → WAIT `DI[BOSH]` (empty box) → reset counter to 0 → WAIT start → END.
 
 ```mermaid
 flowchart TD
@@ -136,16 +122,16 @@ flowchart TD
     WS --> END([END])
 ```
 
-### The key programming ideas illustrated
+**Key ideas.**
 
-- **Labels + JMP** create the **cyclic, signal-gated** structure (return to LBL[1] on timeout; loop the work cycle).
-- **WAIT-for-signal** synchronises the robot with the **cell and the human** (start signal, OK/NOT-OK buttons, empty-box sensor) — the arm never moves on stale assumptions.
-- **Conditional branching** (`IF_THEN/ELSE`) routes the *same* picked part to *different* destinations based on a real-time digital input.
-- **Registers as counters** carry **state across cycles** and drive the reset-at-20 housekeeping — exactly the discrete bookkeeping a continuous controller cannot do.
-- **Position registers** make the box approach/drop points **reusable and offsettable** rather than hard-coded.
-- **FINE vs CNT** is chosen per move: **FINE** at grasp and drop (accuracy), **CNT** on transit corners (speed/smoothness); **ACC** softens the present-to-operator move.
+- **Labels + JMP** → cyclic, signal-gated structure.
+- **WAIT-for-signal** → syncs with cell + human; never acts on stale state.
+- **Conditional branch** → routes same part to different destinations on live DI.
+- **Registers as counters** → state across cycles; reset-at-20 bookkeeping (a continuous controller can't).
+- **Position registers** → reusable/offsettable points vs hard-coded.
+- **FINE vs CNT** → FINE at grasp/drop, CNT on transit; ACC softens present move.
 
-This mirrors the broader autonomy idea that **discrete mission logic** (here: labels, waits, branches, counters) sits **on top of** continuous motion (see [Mission Logic & FSM](../autonomy/mission-fsm.md)); the manipulator program is essentially a small finite-state machine expressed in teach-pendant syntax.
+The TP program is a small FSM in pendant syntax — discrete mission logic over continuous motion (see [Mission Logic & FSM](../autonomy/mission-fsm.md)).
 
 ---
 
@@ -156,3 +142,6 @@ This mirrors the broader autonomy idea that **discrete mission logic** (here: la
 - [Mission Logic & FSM](../autonomy/mission-fsm.md) — labels/waits/branches/counters are a teach-pendant FSM over the work cycle.
 - [Trajectory Generation & Tracking](../autonomy/trajectory.md) — J/L/C/A formats and FINE/CNT/ACC shape the executed trajectory.
 - [Control Systems & PID](../autonomy/control-pid.md) — the servo loops that realise each commanded point beneath the program.
+
+## Handbook references
+- *Robotic Manipulation* — [Let's get you a robot](https://manipulation.csail.mit.edu/robot.html) · [Basic Pick and Place](https://manipulation.csail.mit.edu/pick.html)

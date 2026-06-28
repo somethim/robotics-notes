@@ -5,6 +5,10 @@ site_url: https://example.github.io/robotics/
 
 docs_dir: content
 
+# Build-time hook: renders inline ```mermaid blocks to cached SVG images.
+hooks:
+  - tools/mermaid_to_svg.py
+
 theme:
   name: material
   features:
@@ -34,6 +38,9 @@ theme:
 
 plugins:
   - search
+  - glightbox:        # click any diagram to zoom / pan
+      zoomable: true
+      draggable: true
 
 markdown_extensions:
   - attr_list

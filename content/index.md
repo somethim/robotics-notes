@@ -8,6 +8,12 @@ aliases: [Robotics Home, Robotics Index, Map of Content]
 
 A theory reference for *Elements of Robotics & Automation*, split into linked topic notes and grouped into sections. Start here and follow the links.
 
+!!! note "Primary sources"
+    These notes track two MIT textbooks by Russ Tedrake — every topic note links the relevant chapters under its **Handbook references** section:
+
+    - **Underactuated Robotics** — <https://underactuated.csail.mit.edu/>
+    - **Robotic Manipulation** — <https://manipulation.csail.mit.edu/>
+
 !!! tip "The hub note"
     The single most connected note is **[The Autonomy Stack](foundations/autonomy-stack.md)** — it shows the full sense → think → act loop and links out to every building block.
 

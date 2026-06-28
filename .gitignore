@@ -1,3 +1,8 @@
 site/
 .cache/
 .venv/
+node_modules/
+
+# Diagram cache IS committed (so CI renders nothing) — except the
+# machine-specific puppeteer config, which the hook regenerates.
+.diagram-cache/puppeteer.json
